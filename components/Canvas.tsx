@@ -184,18 +184,46 @@ export const Canvas: React.FC<CanvasProps> = ({
       );
 
       if (!exists) {
-        // Default random color
-        let color = CONNECTION_COLORS[Math.floor(Math.random() * CONNECTION_COLORS.length)];
+        // --- IMPROVED COLOR LOGIC ---
+        let color: string | undefined;
 
-        // If the source field already has outgoing relationships, reuse that color
+        // 1. Try to inherit from Source Field (Outgoing or Incoming)
         if (connectionStart.fieldId) {
-            const existingSourceRel = relationships.find(r => 
-                r.sourceTableId === connectionStart.tableId && 
-                r.sourceFieldId === connectionStart.fieldId
+            const r = relationships.find(rel => 
+                (rel.sourceTableId === connectionStart.tableId && rel.sourceFieldId === connectionStart.fieldId) ||
+                (rel.targetTableId === connectionStart.tableId && rel.targetFieldId === connectionStart.fieldId)
             );
-            if (existingSourceRel && existingSourceRel.color) {
-                color = existingSourceRel.color;
-            }
+            if (r?.color) color = r.color;
+        }
+
+        // 2. Try to inherit from Target Field (Outgoing or Incoming)
+        if (!color && fieldId) {
+            const r = relationships.find(rel => 
+                (rel.sourceTableId === tableId && rel.sourceFieldId === fieldId) ||
+                (rel.targetTableId === tableId && rel.targetFieldId === fieldId)
+            );
+            if (r?.color) color = r.color;
+        }
+
+        // 3. Try to inherit from Source Table (Flow continuity - any connection to this table)
+        if (!color) {
+            const r = relationships.find(rel => 
+                rel.sourceTableId === connectionStart.tableId || rel.targetTableId === connectionStart.tableId
+            );
+            if (r?.color) color = r.color;
+        }
+
+        // 4. Try to inherit from Target Table
+        if (!color) {
+             const r = relationships.find(rel => 
+                rel.sourceTableId === tableId || rel.targetTableId === tableId
+            );
+            if (r?.color) color = r.color;
+        }
+
+        // 5. New random color if isolated
+        if (!color) {
+            color = CONNECTION_COLORS[Math.floor(Math.random() * CONNECTION_COLORS.length)];
         }
 
         const newRel: Relationship = {
@@ -227,8 +255,6 @@ export const Canvas: React.FC<CanvasProps> = ({
   
   const handleRelationshipClick = (e: React.MouseEvent, r: Relationship) => {
       e.stopPropagation();
-      // Optional: clicking the line also brings up menu or toggles?
-      // For now, let's keep the line click simple or we can just ignore it for the context menu requirement
   };
   
   const handleFieldContextMenu = (e: React.MouseEvent, tableId: string, fieldId: string, color: string) => {
@@ -537,23 +563,32 @@ export const Canvas: React.FC<CanvasProps> = ({
         </svg>
 
         {/* HTML Layer for Tables */}
-        {tables.map(table => (
-          <TableNode
-            key={table.id}
-            table={table}
-            isSelected={selectedTableId === table.id}
-            onMouseDown={handleTableMouseDown}
-            onUpdate={handleTableUpdate}
-            onDelete={handleTableDelete}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnectField}
-            scale={zoom}
-            isConnecting={!!connectionStart}
-            fieldColors={fieldColors}
-            highlightedColor={highlightedColor}
-            onFieldContextMenu={handleFieldContextMenu}
-          />
-        ))}
+        {tables.map(table => {
+          // Calculate dimming status: Is this table part of the highlighted flow?
+          // We check if the table has ANY relationship matching the highlighted color.
+          const isRelatedToHighlight = highlightedColor 
+            ? relationships.some(r => r.color === highlightedColor && (r.sourceTableId === table.id || r.targetTableId === table.id))
+            : true;
+          
+          return (
+            <TableNode
+              key={table.id}
+              table={table}
+              isSelected={selectedTableId === table.id}
+              onMouseDown={handleTableMouseDown}
+              onUpdate={handleTableUpdate}
+              onDelete={handleTableDelete}
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnectField}
+              scale={zoom}
+              isConnecting={!!connectionStart}
+              fieldColors={fieldColors}
+              highlightedColor={highlightedColor}
+              isDimmed={highlightedColor ? !isRelatedToHighlight : false}
+              onFieldContextMenu={handleFieldContextMenu}
+            />
+          );
+        })}
       </div>
     </div>
   );

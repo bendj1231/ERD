@@ -14,6 +14,7 @@ interface TableNodeProps {
   isConnecting: boolean;
   fieldColors: Record<string, string>; // Map of field ID to color
   highlightedColor: string | null;
+  isDimmed: boolean; // New prop controlled by Canvas
   onFieldContextMenu: (e: React.MouseEvent, tableId: string, fieldId: string, color: string) => void;
 }
 
@@ -93,6 +94,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
   isConnecting,
   fieldColors,
   highlightedColor,
+  isDimmed,
   onFieldContextMenu
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
@@ -152,14 +154,6 @@ export const TableNode: React.FC<TableNodeProps> = ({
     }
   };
 
-  // Check if this table has any fields involved in the highlighted flow
-  const hasHighlightedField = highlightedColor 
-    ? table.fields.some(f => fieldColors[f.id] === highlightedColor)
-    : true;
-    
-  // If highlightedColor is active, and this table doesn't have it, dim it significantly
-  const isTableDimmed = highlightedColor && !hasHighlightedField;
-
   return (
     <div
       className={`absolute flex flex-col bg-white rounded-lg shadow-lg border-2 transition-all duration-300 select-none ${
@@ -170,8 +164,8 @@ export const TableNode: React.FC<TableNodeProps> = ({
         top: table.y,
         width: 280,
         zIndex: isSelected ? 50 : 10,
-        opacity: isTableDimmed ? 0.2 : 1,
-        filter: isTableDimmed ? 'blur(1px) grayscale(50%)' : 'none'
+        opacity: isDimmed ? 0.2 : 1,
+        filter: isDimmed ? 'blur(1px) grayscale(50%)' : 'none'
       }}
       onMouseDown={(e) => onMouseDown(e, table.id)}
     >
@@ -255,13 +249,14 @@ export const TableNode: React.FC<TableNodeProps> = ({
       <div className="p-2 space-y-1 bg-white pt-2">
         {table.fields.map((field) => {
           const fieldColor = fieldColors[field.id];
-          // Logic for dimming specific fields if the table itself isn't dimmed
           
           let fieldOpacity = 1;
-          if (highlightedColor) {
+          // Only apply field-level dimming if the table itself isn't already dimmed
+          // and we are in focus mode.
+          if (!isDimmed && highlightedColor) {
              if (fieldColor === highlightedColor) fieldOpacity = 1;
-             else if (fieldColor) fieldOpacity = 0.2; 
-             else fieldOpacity = 0.5;
+             else if (fieldColor) fieldOpacity = 0.3; // Dim other colored fields
+             else fieldOpacity = 0.6; // Neutral fields
           }
 
           const handleProps = {
