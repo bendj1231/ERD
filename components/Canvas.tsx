@@ -11,6 +11,11 @@ interface CanvasProps {
   onRelationshipsUpdate: (rels: Relationship[]) => void;
   selectedTableId: string | null;
   onSelectTable: (id: string | null) => void;
+  // Lifted state props
+  zoom: number;
+  setZoom: React.Dispatch<React.SetStateAction<number>>;
+  offset: Point;
+  setOffset: React.Dispatch<React.SetStateAction<Point>>;
 }
 
 const TABLE_SIZE: Size = { width: 280, height: 200 }; 
@@ -51,9 +56,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   onRelationshipsUpdate,
   selectedTableId,
   onSelectTable,
+  zoom,
+  setZoom,
+  offset,
+  setOffset
 }) => {
-  const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
+  // offset and zoom are now props
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
   const [draggingTableId, setDraggingTableId] = useState<string | null>(null);
@@ -99,7 +107,6 @@ export const Canvas: React.FC<CanvasProps> = ({
       
       // Note: We don't reset highlightedColor on background click automatically 
       // if the user wants to keep the view focused while panning. 
-      // User can use the top banner close button to exit focus mode.
     }
   };
 
@@ -150,9 +157,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     const delta = -e.deltaY * zoomSensitivity;
     
     // Clamp zoom between 0.2 and 3
-    const newZoom = Math.min(Math.max(0.2, zoom + delta), 3);
-    
-    setZoom(newZoom);
+    setZoom(z => Math.min(Math.max(0.2, z + delta), 3));
   };
 
   const handleTableMouseDown = (e: React.MouseEvent, tableId: string) => {

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Canvas } from './components/Canvas';
-import { Table, Relationship } from './types';
+import { Table, Relationship, Point } from './types';
 import { Database, Plus, Wand2, Download, Code, FileJson, Loader2, Save, Upload } from 'lucide-react';
 import { generateSchemaFromPrompt } from './services/geminiService';
 
@@ -43,15 +43,35 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
   const [exportFormat, setExportFormat] = useState<'SQL' | 'JSON'>('SQL');
   
+  // Canvas View State (Lifted from Canvas)
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddTable = () => {
+    // Calculate position to center the new table in the current viewport
+    const sidebarWidth = 320; // 20rem or w-80
+    const viewportWidth = window.innerWidth - sidebarWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Viewport Center relative to the canvas container (main element)
+    // We assume the canvas container starts at x=0 (relative to itself) and has width = viewportWidth
+    const cx = viewportWidth / 2;
+    const cy = viewportHeight / 2;
+
+    // Convert Screen Coordinate to World Coordinate
+    // World = (Screen - Offset) / Zoom
+    const worldX = (cx - offset.x) / zoom;
+    const worldY = (cy - offset.y) / zoom;
+
     const newTable: Table = {
       id: crypto.randomUUID(),
       name: 'New_Table',
       description: '',
-      x: 100 + Math.random() * 100,
-      y: 100 + Math.random() * 100,
+      // Center the table (approx width 280, height 200)
+      x: worldX - 140, 
+      y: worldY - 100,
       fields: [
         { id: crypto.randomUUID(), name: 'id', type: 'INT', isPrimaryKey: true, isForeignKey: false, isNullable: false }
       ]
@@ -293,6 +313,10 @@ export default function App() {
           onRelationshipsUpdate={setRelationships}
           selectedTableId={selectedTableId}
           onSelectTable={setSelectedTableId}
+          zoom={zoom}
+          setZoom={setZoom}
+          offset={offset}
+          setOffset={setOffset}
         />
       </main>
 
