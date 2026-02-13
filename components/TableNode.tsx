@@ -16,6 +16,7 @@ interface TableNodeProps {
   highlightedColor: string | null;
   isDimmed: boolean; // New prop controlled by Canvas
   onFieldContextMenu: (e: React.MouseEvent, tableId: string, fieldId: string, color: string) => void;
+  theme: 'light' | 'dark';
 }
 
 const FIELD_TYPES: FieldType[] = ['UUID', 'INT', 'VARCHAR', 'TEXT', 'BOOLEAN', 'DATE', 'TIMESTAMP', 'DECIMAL'];
@@ -37,7 +38,8 @@ const ConnectionHandle = ({
   isConnecting, 
   color, 
   onClick, 
-  onContextMenu 
+  onContextMenu,
+  isDark
 }: {
   side: 'left' | 'right';
   isConnected: boolean;
@@ -45,6 +47,7 @@ const ConnectionHandle = ({
   color?: string;
   onClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  isDark: boolean;
 }) => (
   <button
     onClick={onClick}
@@ -65,11 +68,11 @@ const ConnectionHandle = ({
       style={{
          // Prioritize showing 'connecting' state (violet) if isConnecting is true, 
          // otherwise show connected color or default gray
-         borderColor: isConnecting ? '#8b5cf6' : (isConnected ? color : '#cbd5e1'),
+         borderColor: isConnecting ? '#8b5cf6' : (isConnected ? color : (isDark ? '#52525b' : '#cbd5e1')),
          
          // If connecting, keep background white to show the Plus icon clearly.
          // If not connecting but connected, show solid color.
-         backgroundColor: isConnecting ? '#ffffff' : (isConnected ? color : '#f8fafc'),
+         backgroundColor: isConnecting ? '#ffffff' : (isConnected ? color : (isDark ? '#18181b' : '#f8fafc')),
          
          // Thicker border for connected nodes when idle, thinner for connecting target/source
          borderWidth: isConnected && !isConnecting ? '4px' : (isConnecting ? '2px' : '1px')
@@ -95,13 +98,15 @@ export const TableNode: React.FC<TableNodeProps> = ({
   fieldColors,
   highlightedColor,
   isDimmed,
-  onFieldContextMenu
+  onFieldContextMenu,
+  theme
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [expandedFieldId, setExpandedFieldId] = useState<string | null>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
@@ -154,12 +159,23 @@ export const TableNode: React.FC<TableNodeProps> = ({
     }
   };
 
+  // Styles based on Theme
+  const containerClass = isDark ? 'bg-zinc-800 border-zinc-700' : 'bg-white border-slate-200';
+  const headerClass = isDark ? 'bg-zinc-900/50 border-zinc-700' : 'bg-slate-50 border-slate-100';
+  const headerTextClass = isDark ? 'text-zinc-200' : 'text-slate-700';
+  const descBgClass = isDark ? 'bg-zinc-800' : 'bg-white';
+  const descTextClass = isDark ? 'text-zinc-400 bg-zinc-800 placeholder:text-zinc-600' : 'text-slate-500 bg-slate-50 placeholder:text-slate-300';
+  const bodyBgClass = isDark ? 'bg-zinc-800' : 'bg-white';
+  const footerClass = isDark ? 'bg-zinc-900/30 border-zinc-700' : 'bg-slate-50 border-slate-100';
+  const inputClass = isDark ? 'text-zinc-200 bg-transparent' : 'text-slate-700 bg-transparent';
+  const typeClass = isDark ? 'text-zinc-500 hover:text-blue-400 bg-zinc-800' : 'text-slate-500 hover:text-blue-600 bg-transparent';
+
   return (
     <div
-      className={`absolute flex flex-col bg-white rounded-lg shadow-lg border-2 transition-all duration-300 select-none ${
-        isSelected ? 'border-blue-500 shadow-blue-200 ring-2 ring-blue-100' : 
-        table.isComplete ? 'border-green-400 ring-1 ring-green-100' : 'border-slate-200 hover:border-slate-300'
-      }`}
+      className={`absolute flex flex-col rounded-lg shadow-lg border-2 transition-all duration-300 select-none ${
+        isSelected ? 'border-blue-500 shadow-blue-500/20 ring-2 ring-blue-500/20' : 
+        table.isComplete ? 'border-green-500/50 ring-1 ring-green-500/20' : `${containerClass} hover:border-blue-400/50`
+      } ${isDark ? 'shadow-black/50' : ''}`}
       style={{
         left: table.x,
         top: table.y,
@@ -172,7 +188,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
     >
       {/* Header (Height ~40px) */}
       <div className={`flex items-center justify-between p-2 border-b rounded-t-lg cursor-grab active:cursor-grabbing h-[40px] box-border transition-colors ${
-        table.isComplete ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'
+        table.isComplete ? (isDark ? 'bg-green-900/20 border-green-800' : 'bg-green-50 border-green-100') : headerClass
       }`}>
         <div className="flex items-center gap-2 flex-1 overflow-hidden">
            {/* Completion Checkbox */}
@@ -181,7 +197,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
              className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all ${
                table.isComplete 
                ? 'bg-green-500 border-green-600 shadow-sm' 
-               : 'bg-white border-slate-300 hover:border-blue-400'
+               : (isDark ? 'bg-zinc-800 border-zinc-600 hover:border-blue-400' : 'bg-white border-slate-300 hover:border-blue-400')
              }`}
              title={table.isComplete ? "Mark as Incomplete" : "Mark as Complete"}
            >
@@ -192,7 +208,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
             <input
               ref={nameInputRef}
               type="text"
-              className="w-full text-sm font-bold bg-white border border-blue-300 rounded px-1 outline-none"
+              className={`w-full text-sm font-bold border rounded px-1 outline-none ${isDark ? 'bg-zinc-700 border-zinc-500 text-white' : 'bg-white border-blue-300 text-slate-900'}`}
               value={table.name}
               onChange={(e) => onUpdate(table.id, { name: e.target.value })}
               onBlur={() => setIsEditingName(false)}
@@ -200,8 +216,8 @@ export const TableNode: React.FC<TableNodeProps> = ({
             />
           ) : (
             <span 
-              className={`text-sm font-bold truncate cursor-pointer hover:text-blue-600 ${
-                  table.isComplete ? 'text-green-800' : 'text-slate-700'
+              className={`text-sm font-bold truncate cursor-pointer hover:text-blue-500 ${
+                  table.isComplete ? 'text-green-600' : headerTextClass
               }`}
               onDoubleClick={() => setIsEditingName(true)}
             >
@@ -213,7 +229,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
           {/* Image Upload */}
           <button 
              onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-             className="p-1 rounded transition-colors text-slate-400 hover:bg-blue-100 hover:text-blue-600"
+             className={`p-1 rounded transition-colors ${isDark ? 'text-zinc-500 hover:bg-blue-500/20 hover:text-blue-400' : 'text-slate-400 hover:bg-blue-100 hover:text-blue-600'}`}
              title="Add Image Preview"
           >
               <ImageIcon size={14} />
@@ -229,7 +245,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
           
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete(table.id); }}
-            className="p-1 hover:bg-red-100 text-slate-400 hover:text-red-600 rounded"
+            className={`p-1 rounded ${isDark ? 'text-zinc-500 hover:bg-red-900/30 hover:text-red-400' : 'text-slate-400 hover:bg-red-100 hover:text-red-600'}`}
           >
             <Trash2 size={14} />
           </button>
@@ -237,10 +253,10 @@ export const TableNode: React.FC<TableNodeProps> = ({
       </div>
 
       {/* Table Description */}
-      <div className="px-2 pt-2 bg-white">
+      <div className={`px-2 pt-2 ${descBgClass}`}>
         <textarea
           ref={descriptionRef}
-          className="w-full text-xs text-slate-500 bg-slate-50 border border-transparent hover:border-slate-200 focus:border-blue-300 rounded px-1.5 py-1 outline-none resize-none overflow-hidden placeholder:text-slate-300"
+          className={`w-full text-xs border border-transparent rounded px-1.5 py-1 outline-none resize-none overflow-hidden ${descTextClass} ${isDark ? 'focus:border-blue-500/50 hover:border-zinc-700' : 'focus:border-blue-300 hover:border-slate-200'}`}
           placeholder="Add description..."
           rows={1}
           value={table.description || ''}
@@ -250,7 +266,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
 
       {/* Image Preview */}
       {table.imageUrl && (
-        <div className="relative w-full h-32 bg-slate-100 group/image border-b border-slate-100">
+        <div className={`relative w-full h-32 group/image border-b ${isDark ? 'bg-zinc-900 border-zinc-700' : 'bg-slate-100 border-slate-100'}`}>
             <img src={table.imageUrl} alt="Table Preview" className="w-full h-full object-cover" />
             <button 
                 onClick={(e) => { e.stopPropagation(); onUpdate(table.id, { imageUrl: undefined }); }}
@@ -263,7 +279,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
       )}
 
       {/* Fields (Container padding top 8px) */}
-      <div className="p-2 space-y-1 bg-white pt-2">
+      <div className={`p-2 space-y-1 pt-2 ${bodyBgClass}`}>
         {table.fields.map((field) => {
           const fieldColor = fieldColors[field.id];
           
@@ -291,7 +307,8 @@ export const TableNode: React.FC<TableNodeProps> = ({
                 e.stopPropagation();
                 onFieldContextMenu(e, table.id, field.id, fieldColor);
               }
-            }
+            },
+            isDark
           };
 
           return (
@@ -309,9 +326,9 @@ export const TableNode: React.FC<TableNodeProps> = ({
             >
               {/* Field Row (Height ~32px with margin/padding) */}
               <div 
-                className="flex items-center gap-1 group text-xs h-[32px] rounded px-1"
+                className={`flex items-center gap-1 group text-xs h-[32px] rounded px-1 transition-colors ${isDark ? 'hover:bg-zinc-700/50' : 'hover:bg-slate-50'}`}
                 style={{
-                  backgroundColor: fieldColor ? `${fieldColor}10` : 'transparent', // Very light tint
+                  backgroundColor: fieldColor ? `${fieldColor}10` : undefined, // Very light tint
                   // Border only on top/bottom for row separation if needed, but keeping clear for now
                 }}
               >
@@ -322,7 +339,8 @@ export const TableNode: React.FC<TableNodeProps> = ({
                 {/* Expand for Details/Description */}
                 <button
                   onClick={() => setExpandedFieldId(expandedFieldId === field.id ? null : field.id)}
-                  className="text-slate-300 hover:text-blue-500 -ml-1"
+                  className={`-ml-1 ${isDark ? 'text-zinc-600 hover:text-blue-400' : 'text-slate-300 hover:text-blue-500'}`}
+                  style={{ color: fieldColor || undefined }}
                 >
                   {expandedFieldId === field.id ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
@@ -330,7 +348,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
                 {/* PK Toggle */}
                 <button
                   onClick={() => handleUpdateField(field.id, { isPrimaryKey: !field.isPrimaryKey })}
-                  className={`p-0.5 rounded ${field.isPrimaryKey ? 'text-yellow-500' : 'text-slate-200 hover:text-slate-400'}`}
+                  className={`p-0.5 rounded ${field.isPrimaryKey ? 'text-yellow-500' : (isDark ? 'text-zinc-600 hover:text-zinc-400' : 'text-slate-200 hover:text-slate-400')}`}
                   title="Toggle Primary Key"
                 >
                   <Key size={12} fill={field.isPrimaryKey ? "currentColor" : "none"} />
@@ -338,19 +356,20 @@ export const TableNode: React.FC<TableNodeProps> = ({
 
                 {/* Name */}
                 <input
-                  className="flex-1 min-w-0 outline-none border-b border-transparent focus:border-blue-300 hover:bg-slate-50 rounded px-1 py-0.5 font-medium text-slate-700 bg-transparent"
+                  className={`flex-1 min-w-0 outline-none border-b border-transparent rounded px-1 py-0.5 font-medium ${inputClass} ${isDark ? 'focus:border-blue-500/50' : 'focus:border-blue-300'}`}
                   value={field.name}
                   onChange={(e) => handleUpdateField(field.id, { name: e.target.value })}
                   placeholder="Field name"
-                  style={{ color: fieldColor ? 'inherit' : undefined }}
+                  style={{ color: fieldColor || undefined }}
                 />
 
                 {/* Type */}
                 <select
-                  className="w-24 outline-none text-slate-500 bg-transparent text-[11px] font-medium cursor-pointer hover:text-blue-600"
+                  className={`w-24 outline-none text-[11px] font-medium cursor-pointer ${typeClass}`}
                   value={field.type}
                   onChange={(e) => handleUpdateField(field.id, { type: e.target.value as FieldType })}
                   title={`Technical Type: ${field.type}`}
+                  style={{ color: fieldColor || undefined }}
                 >
                   {FIELD_TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
                 </select>
@@ -385,7 +404,7 @@ export const TableNode: React.FC<TableNodeProps> = ({
               {expandedFieldId === field.id && (
                 <div className="ml-8 mr-6 mt-1 mb-2">
                   <input
-                    className="w-full text-[10px] text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-1 outline-none focus:border-blue-300 placeholder:text-slate-300"
+                    className={`w-full text-[10px] border rounded px-1.5 py-1 outline-none ${isDark ? 'bg-zinc-900 border-zinc-700 text-zinc-400 focus:border-blue-500 placeholder:text-zinc-700' : 'bg-slate-50 border-slate-100 text-slate-500 focus:border-blue-300 placeholder:text-slate-300'}`}
                     placeholder="Describe this field..."
                     value={field.description || ''}
                     onChange={(e) => handleUpdateField(field.id, { description: e.target.value })}
@@ -398,10 +417,10 @@ export const TableNode: React.FC<TableNodeProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-slate-100 bg-slate-50 rounded-b-lg">
+      <div className={`p-2 border-t rounded-b-lg ${footerClass}`}>
         <button
           onClick={handleAddField}
-          className="flex items-center justify-center w-full gap-1 py-1 text-xs font-medium text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          className={`flex items-center justify-center w-full gap-1 py-1 text-xs font-medium rounded transition-colors ${isDark ? 'text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10' : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'}`}
         >
           <Plus size={12} /> Add Field
         </button>

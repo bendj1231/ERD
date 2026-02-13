@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { Table, Relationship, Point } from './types';
-import { Database, Plus, Wand2, Download, Code, FileJson, Loader2, Save, Upload } from 'lucide-react';
+import { Database, Plus, Wand2, Download, Code, FileJson, Loader2, Save, Upload, Sun, Moon } from 'lucide-react';
 import { generateSchemaFromPrompt } from './services/geminiService';
 
 const EXAMPLE_PROMPT = "Create a school system with Students, Courses, and Teachers.";
@@ -11,30 +11,32 @@ export default function App() {
     {
       id: '1',
       name: 'Users',
-      description: 'wingmentor portal',
+      description: 'System users',
       x: 100,
       y: 100,
       fields: [
         { id: 'f1', name: 'id', type: 'UUID', isPrimaryKey: true, isForeignKey: false, isNullable: false },
-        { id: 'f2', name: 'password', type: 'VARCHAR', isPrimaryKey: false, isForeignKey: false, isNullable: false },
+        { id: 'f2', name: 'username', type: 'VARCHAR', isPrimaryKey: false, isForeignKey: false, isNullable: false },
+        { id: 'f3', name: 'email', type: 'VARCHAR', isPrimaryKey: false, isForeignKey: false, isNullable: false },
       ]
     },
     {
       id: '2',
-      name: 'Posts',
-      description: 'platform page',
+      name: 'Logs',
+      description: 'Activity logs',
       x: 500,
       y: 100,
       fields: [
-         { id: 'p1', name: 'pathways', type: 'UUID', isPrimaryKey: false, isForeignKey: false, isNullable: true },
-         { id: 'p2', name: 'programs', type: 'UUID', isPrimaryKey: false, isForeignKey: false, isNullable: true },
-         { id: 'p3', name: 'systems', type: 'VARCHAR', isPrimaryKey: false, isForeignKey: false, isNullable: true },
+         { id: 'p1', name: 'id', type: 'UUID', isPrimaryKey: true, isForeignKey: false, isNullable: false },
+         { id: 'p2', name: 'user_id', type: 'UUID', isPrimaryKey: false, isForeignKey: true, isNullable: true },
+         { id: 'p3', name: 'action', type: 'VARCHAR', isPrimaryKey: false, isForeignKey: false, isNullable: true },
+         { id: 'p4', name: 'timestamp', type: 'TIMESTAMP', isPrimaryKey: false, isForeignKey: false, isNullable: false },
       ]
     }
   ]);
 
   const [relationships, setRelationships] = useState<Relationship[]>([
-     { id: 'r1', sourceTableId: '1', sourceFieldId: 'f1', targetTableId: '2', targetFieldId: 'p2', cardinality: '1:N', label: 'access', color: '#8b5cf6' }
+     { id: 'r1', sourceTableId: '2', sourceFieldId: 'p2', targetTableId: '1', targetFieldId: 'f1', cardinality: 'N:1', label: 'logs', color: '#3b82f6' }
   ]);
 
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export default function App() {
   // Canvas View State (Lifted from Canvas)
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -152,7 +155,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'erd-design.json';
+    a.download = 'database-schema.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -176,7 +179,7 @@ export default function App() {
           setTables(data.tables);
           setRelationships(data.relationships);
         } else {
-          alert('Invalid file format. Please upload a valid EasyERD JSON file.');
+          alert('Invalid file format. Please upload a valid JSON file.');
         }
       } catch (error) {
         alert('Failed to parse the file.');
@@ -187,84 +190,97 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-slate-100 text-slate-900 overflow-hidden">
+    <div className={`flex h-screen w-screen overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-100 text-zinc-900'}`}>
       
       {/* Sidebar */}
-      <aside className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-xl z-20">
-        <div className="p-4 border-b border-slate-100 flex items-center gap-2">
-          <div className="bg-blue-600 text-white p-2 rounded-lg">
-             <Database size={20} />
+      <aside className="w-80 bg-zinc-950 border-r border-zinc-800 flex flex-col shadow-2xl z-20 text-zinc-300">
+        <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <div className="bg-white text-zinc-950 p-2 rounded-lg shadow-lg shadow-white/10">
+                <Database size={24} strokeWidth={2} />
+             </div>
+             <div>
+                 <h1 className="font-bold text-lg tracking-tight text-white leading-tight">Database</h1>
+                 <h1 className="font-bold text-lg tracking-tight text-zinc-400 leading-tight">Management</h1>
+             </div>
           </div>
-          <h1 className="font-bold text-xl tracking-tight text-slate-800">EasyERD</h1>
+          <button 
+             onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+             className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors"
+             title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+          >
+             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
         </div>
 
-        <div className="p-4 flex-1 overflow-y-auto space-y-6">
+        <div className="p-5 flex-1 overflow-y-auto space-y-8">
           
           {/* Actions */}
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Structure</h3>
              <button 
               onClick={handleAddTable}
-              className="w-full flex items-center gap-2 justify-center bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 py-2.5 rounded-lg font-medium transition-all"
+              className="w-full flex items-center gap-2 justify-center bg-white text-zinc-950 hover:bg-zinc-200 py-3 rounded-lg font-bold transition-all shadow-lg shadow-white/5"
             >
               <Plus size={18} /> Add New Table
             </button>
           </div>
 
-          <hr className="border-slate-100" />
+          <hr className="border-zinc-800" />
 
           {/* AI Generator */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-slate-800 font-semibold">
-              <Wand2 size={18} className="text-purple-500" />
-              <h2>AI Generator</h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-white font-semibold">
+              <Wand2 size={18} className="text-zinc-100" />
+              <h2>AI Architect</h2>
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Describe your app, and Gemini will build the database structure for you.
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              Describe your system, and the AI will generate the optimal schema structure.
             </p>
             <textarea 
-              className="w-full h-32 p-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-100 focus:border-purple-400 outline-none resize-none bg-slate-50"
-              placeholder="e.g. A library system with Books, Authors, and Loans..."
+              className="w-full h-32 p-3 text-sm border border-zinc-700 rounded-lg focus:ring-1 focus:ring-white focus:border-white outline-none resize-none bg-zinc-900 text-zinc-200 placeholder:text-zinc-600 transition-all"
+              placeholder="e.g. A CRM for a real estate agency with Agents, Properties, and Clients..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
              <button 
               onClick={handleGenerateAI}
               disabled={isGenerating || !prompt.trim()}
-              className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white py-2.5 rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-purple-200"
+              className="w-full flex items-center justify-center gap-2 bg-zinc-800 text-white border border-zinc-700 py-2.5 rounded-lg font-medium hover:bg-zinc-700 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
               {isGenerating ? 'Designing...' : 'Generate Schema'}
             </button>
             <button 
               onClick={() => setPrompt(EXAMPLE_PROMPT)} 
-              className="text-xs text-slate-400 hover:text-purple-600 underline"
+              className="text-xs text-zinc-500 hover:text-white underline transition-colors"
             >
-              Try example
+              Load example prompt
             </button>
           </div>
 
-          <hr className="border-slate-100" />
+          <hr className="border-zinc-800" />
 
           {/* Project & Export */}
           <div>
-            <div className="flex items-center gap-2 text-slate-800 font-semibold mb-3">
-              <Download size={18} className="text-emerald-500" />
+            <div className="flex items-center gap-2 text-white font-semibold mb-4">
+              <Download size={18} className="text-zinc-100" />
               <h2>Project Data</h2>
             </div>
             
             <div className="space-y-3">
               {/* File Management */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                  <button 
                   onClick={handleDownloadFile}
-                  className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white py-2 rounded text-sm font-medium transition-colors"
+                  className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white py-2 rounded text-sm font-medium transition-all"
                   title="Download Project File"
                 >
                   <Save size={16} /> Save
                 </button>
                  <button 
                   onClick={handleImportClick}
-                  className="flex items-center justify-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2 rounded text-sm font-medium transition-colors"
+                  className="flex items-center justify-center gap-2 bg-transparent border border-zinc-700 hover:bg-zinc-800 text-zinc-300 py-2 rounded text-sm font-medium transition-all"
                   title="Load Project File"
                 >
                   <Upload size={16} /> Load
@@ -279,16 +295,16 @@ export default function App() {
               </div>
 
               {/* View Code */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => { setExportFormat('SQL'); setShowExport(true); }}
-                  className="flex items-center justify-center gap-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 py-2 rounded text-sm font-medium text-slate-600"
+                  className="flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
                 >
                   <Code size={16} /> SQL
                 </button>
                  <button 
                   onClick={() => { setExportFormat('JSON'); setShowExport(true); }}
-                  className="flex items-center justify-center gap-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 py-2 rounded text-sm font-medium text-slate-600"
+                  className="flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
                 >
                   <FileJson size={16} /> JSON
                 </button>
@@ -299,8 +315,8 @@ export default function App() {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-400 text-center">
-          Powered by Gemini 3 Flash
+        <div className="p-4 bg-zinc-950 border-t border-zinc-900 text-[10px] text-zinc-600 text-center uppercase tracking-widest font-semibold">
+          Database Management Systems
         </div>
       </aside>
 
@@ -317,26 +333,27 @@ export default function App() {
           setZoom={setZoom}
           offset={offset}
           setOffset={setOffset}
+          theme={theme}
         />
       </main>
 
       {/* Export Modal */}
       {showExport && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh]">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-bold text-lg">Export {exportFormat}</h3>
-              <button onClick={() => setShowExport(false)} className="p-1 hover:bg-slate-100 rounded text-slate-500"><XIcon /></button>
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-zinc-900 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] border border-zinc-700">
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+              <h3 className="font-bold text-lg text-white">Export {exportFormat}</h3>
+              <button onClick={() => setShowExport(false)} className="p-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors"><XIcon /></button>
             </div>
-            <div className="flex-1 p-0 overflow-hidden bg-slate-900">
-               <pre className="w-full h-full p-4 overflow-auto text-sm font-mono text-emerald-400">
+            <div className="flex-1 p-0 overflow-hidden bg-black">
+               <pre className="w-full h-full p-4 overflow-auto text-sm font-mono text-zinc-300">
                  {getExportContent()}
                </pre>
             </div>
-            <div className="p-4 border-t bg-slate-50 rounded-b-xl flex justify-end gap-2">
+            <div className="p-4 border-t border-zinc-800 bg-zinc-900 rounded-b-xl flex justify-end gap-2">
               <button 
                 onClick={() => { navigator.clipboard.writeText(getExportContent()); }}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium text-sm"
+                className="px-4 py-2 bg-white text-black rounded hover:bg-zinc-200 font-bold text-sm transition-colors"
               >
                 Copy to Clipboard
               </button>

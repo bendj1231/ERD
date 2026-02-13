@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { Table, Relationship, Point, Size } from '../types';
 import { TableNode } from './TableNode';
 import { getIntersection, getCenter } from '../utils/geometry';
-import { X, ZoomIn, ZoomOut, MousePointer2, Eye, EyeOff, Unlink } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, MousePointer2, Eye, EyeOff, Unlink, Trash2, Palette } from 'lucide-react';
 
 interface CanvasProps {
   tables: Table[];
@@ -16,6 +16,7 @@ interface CanvasProps {
   setZoom: React.Dispatch<React.SetStateAction<number>>;
   offset: Point;
   setOffset: React.Dispatch<React.SetStateAction<Point>>;
+  theme: 'light' | 'dark';
 }
 
 const TABLE_SIZE: Size = { width: 280, height: 200 }; 
@@ -47,6 +48,7 @@ interface ContextMenuState {
   color: string;
   tableId?: string;
   fieldId?: string;
+  relationshipId?: string; // ID of the specific relationship being modified
 }
 
 export const Canvas: React.FC<CanvasProps> = ({
@@ -59,7 +61,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   zoom,
   setZoom,
   offset,
-  setOffset
+  setOffset,
+  theme
 }) => {
   // offset and zoom are now props
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
@@ -81,13 +84,14 @@ export const Canvas: React.FC<CanvasProps> = ({
   const fieldColors = useMemo(() => {
     const map: Record<string, string> = {};
     relationships.forEach(r => {
-      if (r.color) {
-        if (r.sourceFieldId) map[r.sourceFieldId] = r.color;
-        if (r.targetFieldId) map[r.targetFieldId] = r.color;
-      }
+      // Use blue by default if no color set
+      const effectiveColor = r.color || '#3b82f6';
+
+      if (r.sourceFieldId) map[r.sourceFieldId] = effectiveColor;
+      if (r.targetFieldId) map[r.targetFieldId] = effectiveColor;
     });
     return map;
-  }, [relationships]);
+  }, [relationships, theme]);
 
   // --- Handlers ---
 
@@ -259,24 +263,41 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
   };
   
+  const handleDisconnectField = (tableId: string, fieldId: string) => {
+    onRelationshipsUpdate(relationships.filter(r => 
+        !((r.sourceTableId === tableId && r.sourceFieldId === fieldId) ||
+          (r.targetTableId === tableId && r.targetFieldId === fieldId))
+    ));
+  };
+
   const handleRelationshipDelete = (id: string) => {
       onRelationshipsUpdate(relationships.filter(r => r.id !== id));
   }
 
-  const handleDisconnectField = (tableId: string, fieldId: string) => {
-    onRelationshipsUpdate(relationships.filter(r => 
-        !((r.sourceTableId === tableId && r.sourceFieldId === fieldId) || 
-          (r.targetTableId === tableId && r.targetFieldId === fieldId))
-    ));
-    if (contextMenu) setContextMenu(null);
-  };
-  
-  const handleRelationshipClick = (e: React.MouseEvent, r: Relationship) => {
-      e.stopPropagation();
+  const handleRelationshipContextMenu = (e: React.MouseEvent, r: Relationship) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (rect) {
+      setContextMenu({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+        color: r.color || '#3b82f6',
+        relationshipId: r.id
+      });
+    }
   };
   
   const handleFieldContextMenu = (e: React.MouseEvent, tableId: string, fieldId: string, color: string) => {
     e.preventDefault(); // Prevent browser context menu
+    e.stopPropagation();
+
+    // Find relationship associated with this field to allow specific editing
+    const rel = relationships.find(r => 
+        (r.sourceTableId === tableId && r.sourceFieldId === fieldId) ||
+        (r.targetTableId === tableId && r.targetFieldId === fieldId)
+    );
+
     const rect = canvasRef.current?.getBoundingClientRect();
     if (rect) {
       setContextMenu({
@@ -284,9 +305,29 @@ export const Canvas: React.FC<CanvasProps> = ({
         y: e.clientY - rect.top,
         color,
         tableId,
-        fieldId
+        fieldId,
+        relationshipId: rel?.id
       });
     }
+  };
+
+  const handleColorChange = (newColor: string) => {
+    if (contextMenu?.relationshipId) {
+      const updated = relationships.map(r => 
+        r.id === contextMenu.relationshipId ? { ...r, color: newColor } : r
+      );
+      onRelationshipsUpdate(updated);
+      setContextMenu(null);
+      
+      // If the user was highlighting this color, switch focus to the new color
+      if (highlightedColor === contextMenu.color) {
+        setHighlightedColor(newColor);
+      }
+    }
+  };
+
+  const handleRelationshipClick = (e: React.MouseEvent, r: Relationship) => {
+      e.stopPropagation();
   };
 
   // --- Geometry Helpers ---
@@ -334,7 +375,11 @@ export const Canvas: React.FC<CanvasProps> = ({
     const target = tables.find(t => t.id === r.targetTableId);
     if (!source || !target) return null;
 
-    const color = r.color || '#94a3b8';
+    let color = r.color;
+    // Fallback colors based on theme if no color set
+    if (!color) {
+        color = '#3b82f6'; // Default to Blue if no color is set
+    }
     
     const isDimmed = highlightedColor && r.color !== highlightedColor;
     const opacity = isDimmed ? 0.1 : 1;
@@ -409,11 +454,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         className="group cursor-pointer transition-opacity duration-300" 
         style={{ opacity }}
         onClick={(e) => handleRelationshipClick(e, r)}
-        onContextMenu={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleRelationshipDelete(r.id);
-        }}
+        onContextMenu={(e) => handleRelationshipContextMenu(e, r)}
       >
         <path
           d={pathD}
@@ -487,10 +528,20 @@ export const Canvas: React.FC<CanvasProps> = ({
     );
   };
 
+  const gridColor = theme === 'dark' ? '#3f3f46' : '#cbd5e1'; // zinc-700 vs slate-300
+  const bgColor = theme === 'dark' ? '#18181b' : '#f8fafc'; // zinc-900 vs slate-50
+  const zoomBtnClass = theme === 'dark' ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700' : 'bg-white text-slate-600 hover:bg-slate-50';
+  const zoomTextClass = theme === 'dark' ? 'bg-zinc-800 text-zinc-300' : 'bg-white text-slate-600';
+
   return (
     <div 
       ref={canvasRef}
-      className="w-full h-full bg-slate-50 relative overflow-hidden pattern-grid cursor-grab active:cursor-grabbing"
+      className="w-full h-full relative overflow-hidden cursor-grab active:cursor-grabbing"
+      style={{
+        backgroundColor: bgColor,
+        backgroundImage: `radial-gradient(${gridColor} 1px, transparent 1px)`,
+        backgroundSize: '20px 20px'
+      }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -500,9 +551,9 @@ export const Canvas: React.FC<CanvasProps> = ({
     >
       {/* Zoom Controls */}
       <div className="absolute bottom-4 right-4 flex gap-2 z-50">
-          <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className="p-2 bg-white rounded shadow hover:bg-slate-50 text-slate-600"><ZoomOut size={20}/></button>
-          <div className="bg-white px-3 py-2 rounded shadow text-sm font-mono text-slate-600 min-w-[60px] text-center">{Math.round(zoom * 100)}%</div>
-          <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className="p-2 bg-white rounded shadow hover:bg-slate-50 text-slate-600"><ZoomIn size={20}/></button>
+          <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomOut size={20}/></button>
+          <div className={`px-3 py-2 rounded shadow text-sm font-mono min-w-[60px] text-center ${zoomTextClass}`}>{Math.round(zoom * 100)}%</div>
+          <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomIn size={20}/></button>
       </div>
 
       {/* Focus Mode Indicator */}
@@ -517,37 +568,53 @@ export const Canvas: React.FC<CanvasProps> = ({
       {/* Custom Context Menu */}
       {contextMenu && (
         <div 
-            className="context-menu absolute z-[100] bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+            className="context-menu absolute z-[100] bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100 origin-top-left"
             style={{ top: contextMenu.y, left: contextMenu.x }}
         >
             <div className="px-3 py-2 border-b border-slate-100 flex items-center gap-2 text-xs font-medium text-slate-500">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: contextMenu.color }}></div>
-                Connection Options
+                <Palette size={14} /> Connection Color
             </div>
-            {highlightedColor === contextMenu.color ? (
-                 <button 
-                    onClick={() => { setHighlightedColor(null); setContextMenu(null); }}
-                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                >
-                    <EyeOff size={16} /> Exit Focus Mode
-                </button>
-            ) : (
-                <button 
-                    onClick={() => { setHighlightedColor(contextMenu.color); setContextMenu(null); }}
-                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                >
-                    <Eye size={16} /> Focus this Flow
-                </button>
-            )}
+            
+            {/* Color Grid */}
+            <div className="p-3 grid grid-cols-6 gap-2 border-b border-slate-100">
+                {CONNECTION_COLORS.map(c => (
+                    <button
+                        key={c}
+                        className={`w-5 h-5 rounded-full hover:scale-110 transition-transform ${contextMenu.color === c ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`}
+                        style={{ backgroundColor: c }}
+                        onClick={() => handleColorChange(c)}
+                        title={c}
+                    />
+                ))}
+            </div>
 
-            {contextMenu.tableId && contextMenu.fieldId && (
-                 <button 
-                    onClick={() => handleDisconnectField(contextMenu.tableId!, contextMenu.fieldId!)}
-                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100"
-                >
-                    <Unlink size={16} /> Disconnect Field
-                </button>
-            )}
+            {/* Actions */}
+            <div className="py-1">
+                {highlightedColor === contextMenu.color ? (
+                     <button 
+                        onClick={() => { setHighlightedColor(null); setContextMenu(null); }}
+                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                    >
+                        <EyeOff size={16} /> Exit Focus Mode
+                    </button>
+                ) : (
+                    <button 
+                        onClick={() => { setHighlightedColor(contextMenu.color); setContextMenu(null); }}
+                        className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                    >
+                        <Eye size={16} /> Focus this Flow
+                    </button>
+                )}
+
+                {contextMenu.relationshipId && (
+                     <button 
+                        onClick={() => { handleRelationshipDelete(contextMenu.relationshipId!); setContextMenu(null); }}
+                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-slate-100 mt-1 pt-2"
+                    >
+                        <Trash2 size={16} /> Delete Connection
+                    </button>
+                )}
+            </div>
         </div>
       )}
 
@@ -571,7 +638,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         <svg className="absolute top-0 left-0 w-[5000px] h-[5000px] pointer-events-none overflow-visible">
           <defs>
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-              <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+              <polygon points="0 0, 10 3.5, 0 7" fill={theme === 'dark' ? '#71717a' : '#94a3b8'} />
             </marker>
              <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
@@ -605,6 +672,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               highlightedColor={highlightedColor}
               isDimmed={highlightedColor ? !isRelatedToHighlight : false}
               onFieldContextMenu={handleFieldContextMenu}
+              theme={theme}
             />
           );
         })}
