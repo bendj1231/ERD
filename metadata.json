@@ -1,0 +1,5 @@
+{
+  "name": "EasyERD - AI Database Designer",
+  "description": "An intuitive, drag-and-drop Entity Relationship Diagram tool powered by Gemini AI. Design databases visually or generate them from text descriptions.",
+  "requestFramePermissions": []
+}
