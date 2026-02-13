@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { Table, Relationship, Point } from './types';
-import { Database, Plus, Wand2, Download, Code, FileJson, Loader2, Save, Upload, Sun, Moon, Printer } from 'lucide-react';
+import { Database, Plus, Wand2, Download, Code, FileJson, Loader2, Save, Upload, Sun, Moon, Printer, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { generateSchemaFromPrompt } from './services/geminiService';
 
 const EXAMPLE_PROMPT = "Create a school system with Students, Courses, and Teachers.";
@@ -44,6 +44,7 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [exportFormat, setExportFormat] = useState<'SQL' | 'JSON'>('SQL');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   // Canvas View State (Lifted from Canvas)
   const [zoom, setZoom] = useState(1);
@@ -54,7 +55,7 @@ export default function App() {
 
   const handleAddTable = () => {
     // Calculate position to center the new table in the current viewport
-    const sidebarWidth = 320; // 20rem or w-80
+    const sidebarWidth = isSidebarOpen ? 320 : 0; 
     const viewportWidth = window.innerWidth - sidebarWidth;
     const viewportHeight = window.innerHeight;
 
@@ -197,143 +198,165 @@ export default function App() {
     <div className={`flex h-screen w-screen overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-100 text-zinc-900'} print:bg-white`}>
       
       {/* Sidebar */}
-      <aside className="w-80 bg-zinc-950 border-r border-zinc-800 flex flex-col shadow-2xl z-20 text-zinc-300 print:hidden">
-        <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <div className="bg-white text-zinc-950 p-2 rounded-lg shadow-lg shadow-white/10">
-                <Database size={24} strokeWidth={2} />
-             </div>
-             <div>
-                 <h1 className="font-bold text-lg tracking-tight text-white leading-tight">Database</h1>
-                 <h1 className="font-bold text-lg tracking-tight text-zinc-400 leading-tight">Management</h1>
-             </div>
-          </div>
-          <button 
-             onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-             className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors"
-             title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
-          >
-             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
-        </div>
-
-        <div className="p-5 flex-1 overflow-y-auto space-y-8">
-          
-          {/* Actions */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Structure</h3>
-             <button 
-              onClick={handleAddTable}
-              className="w-full flex items-center gap-2 justify-center bg-white text-zinc-950 hover:bg-zinc-200 py-3 rounded-lg font-bold transition-all shadow-lg shadow-white/5"
-            >
-              <Plus size={18} /> Add New Table
-            </button>
-          </div>
-
-          <hr className="border-zinc-800" />
-
-          {/* AI Generator */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-white font-semibold">
-              <Wand2 size={18} className="text-zinc-100" />
-              <h2>AI Architect</h2>
-            </div>
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              Describe your system, and the AI will generate the optimal schema structure.
-            </p>
-            <textarea 
-              className="w-full h-32 p-3 text-sm border border-zinc-700 rounded-lg focus:ring-1 focus:ring-white focus:border-white outline-none resize-none bg-zinc-900 text-zinc-200 placeholder:text-zinc-600 transition-all"
-              placeholder="e.g. A CRM for a real estate agency with Agents, Properties, and Clients..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-            />
-             <button 
-              onClick={handleGenerateAI}
-              disabled={isGenerating || !prompt.trim()}
-              className="w-full flex items-center justify-center gap-2 bg-zinc-800 text-white border border-zinc-700 py-2.5 rounded-lg font-medium hover:bg-zinc-700 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
-              {isGenerating ? 'Designing...' : 'Generate Schema'}
-            </button>
-            <button 
-              onClick={() => setPrompt(EXAMPLE_PROMPT)} 
-              className="text-xs text-zinc-500 hover:text-white underline transition-colors"
-            >
-              Load example prompt
-            </button>
-          </div>
-
-          <hr className="border-zinc-800" />
-
-          {/* Project & Export */}
-          <div>
-            <div className="flex items-center gap-2 text-white font-semibold mb-4">
-              <Download size={18} className="text-zinc-100" />
-              <h2>Project Data</h2>
-            </div>
-            
-            <div className="space-y-3">
-              {/* File Management */}
-              <div className="grid grid-cols-2 gap-3">
-                 <button 
-                  onClick={handleDownloadFile}
-                  className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white py-2 rounded text-sm font-medium transition-all"
-                  title="Download Project File"
-                >
-                  <Save size={16} /> Save
-                </button>
-                 <button 
-                  onClick={handleImportClick}
-                  className="flex items-center justify-center gap-2 bg-transparent border border-zinc-700 hover:bg-zinc-800 text-zinc-300 py-2 rounded text-sm font-medium transition-all"
-                  title="Load Project File"
-                >
-                  <Upload size={16} /> Load
-                </button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  className="hidden" 
-                  accept=".json" 
-                  onChange={handleFileChange} 
-                />
+      <aside 
+        className={`${isSidebarOpen ? 'w-80 border-r opacity-100' : 'w-0 border-r-0 opacity-0'} bg-zinc-950 border-zinc-800 flex flex-col shadow-2xl z-20 text-zinc-300 print:hidden transition-all duration-300 ease-in-out overflow-hidden`}
+      >
+        <div className="w-80 flex flex-col h-full min-w-[20rem]">
+            <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-white text-zinc-950 p-2 rounded-lg shadow-lg shadow-white/10">
+                    <Database size={24} strokeWidth={2} />
+                </div>
+                <div>
+                    <h1 className="font-bold text-lg tracking-tight text-white leading-tight">Database</h1>
+                    <h1 className="font-bold text-lg tracking-tight text-zinc-400 leading-tight">Management</h1>
+                </div>
               </div>
+              <div className="flex items-center gap-1">
+                 <button 
+                    onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+                    className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors"
+                    title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+                 >
+                    {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+                 </button>
+                 <button 
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-full transition-colors"
+                    title="Collapse Sidebar"
+                 >
+                    <PanelLeftClose size={20} />
+                 </button>
+              </div>
+            </div>
 
-              {/* View Code */}
-              <div className="grid grid-cols-2 gap-3">
+            <div className="p-5 flex-1 overflow-y-auto space-y-8">
+              
+              {/* Actions */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Structure</h3>
                 <button 
-                  onClick={() => { setExportFormat('SQL'); setShowExport(true); }}
-                  className="flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
+                  onClick={handleAddTable}
+                  className="w-full flex items-center gap-2 justify-center bg-white text-zinc-950 hover:bg-zinc-200 py-3 rounded-lg font-bold transition-all shadow-lg shadow-white/5"
                 >
-                  <Code size={16} /> SQL
-                </button>
-                 <button 
-                  onClick={() => { setExportFormat('JSON'); setShowExport(true); }}
-                  className="flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
-                >
-                  <FileJson size={16} /> JSON
+                  <Plus size={18} /> Add New Table
                 </button>
               </div>
 
-               {/* Print / Export PDF */}
-               <button
-                  onClick={handlePrint}
-                  className="w-full flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
-               >
-                  <Printer size={16} /> Print / PDF
-               </button>
+              <hr className="border-zinc-800" />
+
+              {/* AI Generator */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-white font-semibold">
+                  <Wand2 size={18} className="text-zinc-100" />
+                  <h2>AI Architect</h2>
+                </div>
+                <p className="text-xs text-zinc-500 leading-relaxed">
+                  Describe your system, and the AI will generate the optimal schema structure.
+                </p>
+                <textarea 
+                  className="w-full h-32 p-3 text-sm border border-zinc-700 rounded-lg focus:ring-1 focus:ring-white focus:border-white outline-none resize-none bg-zinc-900 text-zinc-200 placeholder:text-zinc-600 transition-all"
+                  placeholder="e.g. A CRM for a real estate agency with Agents, Properties, and Clients..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                />
+                <button 
+                  onClick={handleGenerateAI}
+                  disabled={isGenerating || !prompt.trim()}
+                  className="w-full flex items-center justify-center gap-2 bg-zinc-800 text-white border border-zinc-700 py-2.5 rounded-lg font-medium hover:bg-zinc-700 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Wand2 size={18} />}
+                  {isGenerating ? 'Designing...' : 'Generate Schema'}
+                </button>
+                <button 
+                  onClick={() => setPrompt(EXAMPLE_PROMPT)} 
+                  className="text-xs text-zinc-500 hover:text-white underline transition-colors"
+                >
+                  Load example prompt
+                </button>
+              </div>
+
+              <hr className="border-zinc-800" />
+
+              {/* Project & Export */}
+              <div>
+                <div className="flex items-center gap-2 text-white font-semibold mb-4">
+                  <Download size={18} className="text-zinc-100" />
+                  <h2>Project Data</h2>
+                </div>
+                
+                <div className="space-y-3">
+                  {/* File Management */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={handleDownloadFile}
+                      className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white py-2 rounded text-sm font-medium transition-all"
+                      title="Download Project File"
+                    >
+                      <Save size={16} /> Save
+                    </button>
+                    <button 
+                      onClick={handleImportClick}
+                      className="flex items-center justify-center gap-2 bg-transparent border border-zinc-700 hover:bg-zinc-800 text-zinc-300 py-2 rounded text-sm font-medium transition-all"
+                      title="Load Project File"
+                    >
+                      <Upload size={16} /> Load
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept=".json" 
+                      onChange={handleFileChange} 
+                    />
+                  </div>
+
+                  {/* View Code */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => { setExportFormat('SQL'); setShowExport(true); }}
+                      className="flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
+                    >
+                      <Code size={16} /> SQL
+                    </button>
+                    <button 
+                      onClick={() => { setExportFormat('JSON'); setShowExport(true); }}
+                      className="flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
+                    >
+                      <FileJson size={16} /> JSON
+                    </button>
+                  </div>
+
+                  {/* Print / Export PDF */}
+                  <button
+                      onClick={handlePrint}
+                      className="w-full flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
+                  >
+                      <Printer size={16} /> Print / PDF
+                  </button>
+                </div>
+              </div>
+
             </div>
-          </div>
 
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 bg-zinc-950 border-t border-zinc-900 text-[10px] text-zinc-600 text-center uppercase tracking-widest font-semibold">
-          Database Management Systems
+            {/* Footer */}
+            <div className="p-4 bg-zinc-950 border-t border-zinc-900 text-[10px] text-zinc-600 text-center uppercase tracking-widest font-semibold">
+              Database Management Systems
+            </div>
         </div>
       </aside>
 
       {/* Main Canvas Area */}
       <main className="flex-1 relative print:fixed print:inset-0 print:z-50 print:bg-white print:w-screen print:h-screen">
+        {!isSidebarOpen && (
+             <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className={`absolute top-4 left-4 z-40 p-2 rounded-lg shadow-lg border transition-all print:hidden ${theme === 'dark' ? 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white' : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-black'}`}
+                title="Open Sidebar"
+             >
+                <PanelLeftOpen size={20} />
+             </button>
+        )}
         <Canvas 
           tables={tables} 
           relationships={relationships}
