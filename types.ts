@@ -19,6 +19,7 @@ export interface Table {
   description?: string;
   imageUrl?: string; // Optional image URL for preview
   width?: number; // Optional for dynamic sizing
+  isComplete?: boolean; // New: status check
 }
 
 export type Cardinality = '1:1' | '1:N' | 'N:M';

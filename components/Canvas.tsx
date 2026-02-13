@@ -142,6 +142,19 @@ export const Canvas: React.FC<CanvasProps> = ({
     setDraggingTableId(null);
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    // Standardizing zoom behavior:
+    // Scroll UP (negative deltaY) -> Zoom IN
+    // Scroll DOWN (positive deltaY) -> Zoom OUT
+    const zoomSensitivity = 0.001; 
+    const delta = -e.deltaY * zoomSensitivity;
+    
+    // Clamp zoom between 0.2 and 3
+    const newZoom = Math.min(Math.max(0.2, zoom + delta), 3);
+    
+    setZoom(newZoom);
+  };
+
   const handleTableMouseDown = (e: React.MouseEvent, tableId: string) => {
     e.stopPropagation(); // Stop canvas drag
     if (contextMenu) setContextMenu(null);
@@ -477,6 +490,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
       onContextMenu={(e) => e.preventDefault()} // Disable default context menu on canvas
     >
       {/* Zoom Controls */}

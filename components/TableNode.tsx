@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Table, Field, FieldType } from '../types';
-import { Trash2, Key, GripVertical, Plus, ChevronDown, ChevronRight, Circle, Link as LinkIcon, Image as ImageIcon, X, Unlink } from 'lucide-react';
+import { Trash2, Key, GripVertical, Plus, ChevronDown, ChevronRight, Circle, Link as LinkIcon, Image as ImageIcon, X, Unlink, Check } from 'lucide-react';
 
 interface TableNodeProps {
   table: Table;
@@ -157,7 +157,8 @@ export const TableNode: React.FC<TableNodeProps> = ({
   return (
     <div
       className={`absolute flex flex-col bg-white rounded-lg shadow-lg border-2 transition-all duration-300 select-none ${
-        isSelected ? 'border-blue-500 shadow-blue-200 ring-2 ring-blue-100' : 'border-slate-200 hover:border-slate-300'
+        isSelected ? 'border-blue-500 shadow-blue-200 ring-2 ring-blue-100' : 
+        table.isComplete ? 'border-green-400 ring-1 ring-green-100' : 'border-slate-200 hover:border-slate-300'
       }`}
       style={{
         left: table.x,
@@ -170,9 +171,23 @@ export const TableNode: React.FC<TableNodeProps> = ({
       onMouseDown={(e) => onMouseDown(e, table.id)}
     >
       {/* Header (Height ~40px) */}
-      <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 rounded-t-lg cursor-grab active:cursor-grabbing h-[40px] box-border">
+      <div className={`flex items-center justify-between p-2 border-b rounded-t-lg cursor-grab active:cursor-grabbing h-[40px] box-border transition-colors ${
+        table.isComplete ? 'bg-green-50 border-green-100' : 'bg-slate-50 border-slate-100'
+      }`}>
         <div className="flex items-center gap-2 flex-1 overflow-hidden">
-          <GripVertical size={14} className="text-slate-400" />
+           {/* Completion Checkbox */}
+           <button 
+             onClick={(e) => { e.stopPropagation(); onUpdate(table.id, { isComplete: !table.isComplete }); }}
+             className={`flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-all ${
+               table.isComplete 
+               ? 'bg-green-500 border-green-600 shadow-sm' 
+               : 'bg-white border-slate-300 hover:border-blue-400'
+             }`}
+             title={table.isComplete ? "Mark as Incomplete" : "Mark as Complete"}
+           >
+              {table.isComplete && <Check size={12} className="text-white" strokeWidth={3} />}
+           </button>
+
           {isEditingName ? (
             <input
               ref={nameInputRef}
@@ -185,7 +200,9 @@ export const TableNode: React.FC<TableNodeProps> = ({
             />
           ) : (
             <span 
-              className="text-sm font-bold text-slate-700 truncate cursor-pointer hover:text-blue-600"
+              className={`text-sm font-bold truncate cursor-pointer hover:text-blue-600 ${
+                  table.isComplete ? 'text-green-800' : 'text-slate-700'
+              }`}
               onDoubleClick={() => setIsEditingName(true)}
             >
               {table.name}
