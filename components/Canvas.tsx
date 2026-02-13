@@ -536,7 +536,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   return (
     <div 
       ref={canvasRef}
-      className="w-full h-full relative overflow-hidden cursor-grab active:cursor-grabbing"
+      className="w-full h-full relative overflow-hidden cursor-grab active:cursor-grabbing print:bg-white print:!bg-none"
       style={{
         backgroundColor: bgColor,
         backgroundImage: `radial-gradient(${gridColor} 1px, transparent 1px)`,
@@ -550,7 +550,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       onContextMenu={(e) => e.preventDefault()} // Disable default context menu on canvas
     >
       {/* Zoom Controls */}
-      <div className="absolute bottom-4 right-4 flex gap-2 z-50">
+      <div className="absolute bottom-4 right-4 flex gap-2 z-50 print:hidden">
           <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomOut size={20}/></button>
           <div className={`px-3 py-2 rounded shadow text-sm font-mono min-w-[60px] text-center ${zoomTextClass}`}>{Math.round(zoom * 100)}%</div>
           <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomIn size={20}/></button>
@@ -558,7 +558,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
       {/* Focus Mode Indicator */}
       {highlightedColor && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg z-50 flex items-center gap-2">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg z-50 flex items-center gap-2 print:hidden">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: highlightedColor }}></div>
             <span className="text-sm font-medium">Flow Focused</span>
             <button onClick={() => setHighlightedColor(null)} className="ml-2 hover:bg-slate-700 rounded-full p-1"><X size={14}/></button>
@@ -568,7 +568,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       {/* Custom Context Menu */}
       {contextMenu && (
         <div 
-            className="context-menu absolute z-[100] bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+            className="context-menu absolute z-[100] bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100 origin-top-left print:hidden"
             style={{ top: contextMenu.y, left: contextMenu.x }}
         >
             <div className="px-3 py-2 border-b border-slate-100 flex items-center gap-2 text-xs font-medium text-slate-500">
@@ -620,7 +620,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
       {/* Connection Mode Indicator */}
       {connectionStart && (
-          <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg z-50 flex items-center gap-2 animate-bounce">
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg z-50 flex items-center gap-2 animate-bounce print:hidden">
               <MousePointer2 size={16} />
               <span className="text-sm font-medium">
                   {connectionStart.fieldId ? "Select target field" : "Select target table"}

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { Table, Relationship, Point } from './types';
-import { Database, Plus, Wand2, Download, Code, FileJson, Loader2, Save, Upload, Sun, Moon } from 'lucide-react';
+import { Database, Plus, Wand2, Download, Code, FileJson, Loader2, Save, Upload, Sun, Moon, Printer } from 'lucide-react';
 import { generateSchemaFromPrompt } from './services/geminiService';
 
 const EXAMPLE_PROMPT = "Create a school system with Students, Courses, and Teachers.";
@@ -97,6 +97,10 @@ export default function App() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const generateSQL = () => {
     let sql = '';
     tables.forEach(t => {
@@ -190,10 +194,10 @@ export default function App() {
   };
 
   return (
-    <div className={`flex h-screen w-screen overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-100 text-zinc-900'}`}>
+    <div className={`flex h-screen w-screen overflow-hidden ${theme === 'dark' ? 'bg-zinc-900 text-zinc-100' : 'bg-zinc-100 text-zinc-900'} print:bg-white`}>
       
       {/* Sidebar */}
-      <aside className="w-80 bg-zinc-950 border-r border-zinc-800 flex flex-col shadow-2xl z-20 text-zinc-300">
+      <aside className="w-80 bg-zinc-950 border-r border-zinc-800 flex flex-col shadow-2xl z-20 text-zinc-300 print:hidden">
         <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
              <div className="bg-white text-zinc-950 p-2 rounded-lg shadow-lg shadow-white/10">
@@ -309,6 +313,14 @@ export default function App() {
                   <FileJson size={16} /> JSON
                 </button>
               </div>
+
+               {/* Print / Export PDF */}
+               <button
+                  onClick={handlePrint}
+                  className="w-full flex items-center justify-center gap-2 border border-zinc-700 hover:border-zinc-500 hover:text-white bg-transparent py-2 rounded text-sm font-medium text-zinc-400 transition-all"
+               >
+                  <Printer size={16} /> Print / PDF
+               </button>
             </div>
           </div>
 
@@ -321,7 +333,7 @@ export default function App() {
       </aside>
 
       {/* Main Canvas Area */}
-      <main className="flex-1 relative">
+      <main className="flex-1 relative print:fixed print:inset-0 print:z-50 print:bg-white print:w-screen print:h-screen">
         <Canvas 
           tables={tables} 
           relationships={relationships}
@@ -339,7 +351,7 @@ export default function App() {
 
       {/* Export Modal */}
       {showExport && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm print:hidden">
           <div className="bg-zinc-900 rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[80vh] border border-zinc-700">
             <div className="flex items-center justify-between p-4 border-b border-zinc-800">
               <h3 className="font-bold text-lg text-white">Export {exportFormat}</h3>
