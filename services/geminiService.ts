@@ -8,7 +8,7 @@ Return a JSON object containing a list of 'tables' and 'relationships'.
 Each table should have a sensible list of fields with types (INT, VARCHAR, TEXT, BOOLEAN, DATE, TIMESTAMP, DECIMAL, UUID).
 IMPORTANT: Provide a brief 'description' for each table explaining its purpose.
 IMPORTANT: Provide a brief 'description' for complex fields if necessary.
-Position the tables (x, y) so they are spread out in a visually pleasing, non-overlapping layout (approx 0-800 range).
+Position the tables (x, y) so they are spread out in a visually pleasing, non-overlapping layout. Do not limit the number of tables; generate as many as necessary to fully satisfy the requirements.
 `;
 
 export const generateSchemaFromPrompt = async (prompt: string): Promise<{ tables: Table[], relationships: Relationship[] }> => {

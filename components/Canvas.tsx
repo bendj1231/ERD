@@ -540,7 +540,8 @@ export const Canvas: React.FC<CanvasProps> = ({
       style={{
         backgroundColor: bgColor,
         backgroundImage: `radial-gradient(${gridColor} 1px, transparent 1px)`,
-        backgroundSize: '20px 20px'
+        backgroundSize: '20px 20px',
+        backgroundPosition: `${offset.x}px ${offset.y}px`
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -635,7 +636,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})` }}
       >
         {/* SVG Layer for Lines */}
-        <svg className="absolute top-0 left-0 w-[5000px] h-[5000px] pointer-events-none overflow-visible">
+        <svg className="absolute top-0 left-0 min-w-[100000px] min-h-[100000px] pointer-events-none overflow-visible">
           <defs>
             <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
               <polygon points="0 0, 10 3.5, 0 7" fill={theme === 'dark' ? '#71717a' : '#94a3b8'} />
