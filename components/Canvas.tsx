@@ -160,8 +160,8 @@ export const Canvas: React.FC<CanvasProps> = ({
     const zoomSensitivity = 0.001; 
     const delta = -e.deltaY * zoomSensitivity;
     
-    // Clamp zoom between 0.2 and 3
-    setZoom(z => Math.min(Math.max(0.2, z + delta), 3));
+    // Clamp zoom between 0.05 and 5 (Updated limits)
+    setZoom(z => Math.min(Math.max(0.05, z + delta), 5));
   };
 
   const handleTableMouseDown = (e: React.MouseEvent, tableId: string) => {
@@ -551,9 +551,9 @@ export const Canvas: React.FC<CanvasProps> = ({
     >
       {/* Zoom Controls */}
       <div className="absolute bottom-4 right-4 flex gap-2 z-50 print:hidden">
-          <button onClick={() => setZoom(z => Math.max(0.2, z - 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomOut size={20}/></button>
+          <button onClick={() => setZoom(z => Math.max(0.05, z - 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomOut size={20}/></button>
           <div className={`px-3 py-2 rounded shadow text-sm font-mono min-w-[60px] text-center ${zoomTextClass}`}>{Math.round(zoom * 100)}%</div>
-          <button onClick={() => setZoom(z => Math.min(2, z + 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomIn size={20}/></button>
+          <button onClick={() => setZoom(z => Math.min(5, z + 0.1))} className={`p-2 rounded shadow ${zoomBtnClass}`}><ZoomIn size={20}/></button>
       </div>
 
       {/* Focus Mode Indicator */}
